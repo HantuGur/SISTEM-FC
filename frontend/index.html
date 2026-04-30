@@ -1,0 +1,191 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Sistem Admin Gym</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <header class="hero">
+      <div>
+        <p class="eyebrow">Web Admin Internal</p>
+        <h1 id="appTitle">Sistem Admin Gym</h1>
+        <p class="subtitle">Input kedatangan, nomor kunci, dan status pelanggan. Data otomatis masuk ke Google Sheet.</p>
+      </div>
+      <div class="clock-card">
+        <span id="todayText">Hari ini</span>
+        <strong id="clockText">--:--:--</strong>
+      </div>
+    </header>
+
+    <section id="setupWarning" class="setup-warning hidden">
+      <div>
+        <strong>Backend belum disambungkan.</strong>
+        <p>Masukkan URL Web App Google Apps Script di <code>config.js</code>, atau tempel sementara di pengaturan bawah.</p>
+      </div>
+      <button type="button" class="secondary-btn" id="openSettingsBtn">Atur URL</button>
+    </section>
+
+    <main class="grid-layout">
+      <section class="card input-card">
+        <div class="card-header">
+          <div>
+            <p class="eyebrow">Form Input</p>
+            <h2>Catat Masuk / Keluar</h2>
+          </div>
+          <span class="pill">Audit Log</span>
+        </div>
+
+        <form id="gymForm" autocomplete="off">
+          <input type="hidden" name="action" value="saveLog" />
+
+          <div class="two-col">
+            <label>
+              Nama Admin
+              <input type="text" name="admin" id="adminInput" placeholder="Contoh: Rani" required />
+            </label>
+            <label>
+              PIN Admin
+              <input type="password" name="pin" id="pinInput" placeholder="PIN" inputmode="numeric" required />
+            </label>
+          </div>
+
+          <label>
+            Nama Pelanggan
+            <input type="text" name="customerName" id="customerNameInput" placeholder="Contoh: Budi Santoso" required />
+          </label>
+
+          <div class="two-col">
+            <label>
+              No HP / No Member
+              <input type="text" name="phoneOrMember" id="phoneInput" placeholder="0812xxxx / MBR001" />
+            </label>
+            <label>
+              Nomor Kunci
+              <input type="number" name="keyNumber" id="keyNumberInput" placeholder="Contoh: 12" min="1" required />
+            </label>
+          </div>
+
+          <div class="two-col">
+            <label>
+              Jenis Kunjungan
+              <select name="visitType" id="visitTypeInput" required>
+                <option value="Harian">Harian</option>
+                <option value="Member">Member</option>
+                <option value="Trial">Trial</option>
+              </select>
+            </label>
+            <label>
+              Status
+              <select name="status" id="statusInput" required>
+                <option value="Masuk">Masuk</option>
+                <option value="Keluar">Keluar</option>
+              </select>
+            </label>
+          </div>
+
+          <label>
+            Catatan
+            <textarea name="note" id="noteInput" rows="3" placeholder="Opsional, contoh: bayar cash / kunci kembali"></textarea>
+          </label>
+
+          <div class="form-actions">
+            <button type="submit" class="primary-btn" id="submitBtn">Simpan ke Google Sheet</button>
+            <button type="button" class="secondary-btn" id="resetBtn">Bersihkan</button>
+          </div>
+        </form>
+
+        <iframe id="submitFrame" name="hidden-submit-frame" title="Hidden submit frame" class="hidden-frame"></iframe>
+      </section>
+
+      <aside class="side-stack">
+        <section class="card stats-card">
+          <div class="card-header compact">
+            <div>
+              <p class="eyebrow">Status Kunci</p>
+              <h2>Ringkasan</h2>
+            </div>
+            <button type="button" class="icon-btn" id="refreshBtn" title="Refresh status kunci">↻</button>
+          </div>
+          <div class="stats-grid">
+            <div>
+              <span>Total</span>
+              <strong id="totalKeysText">0</strong>
+            </div>
+            <div>
+              <span>Dipakai</span>
+              <strong id="usedKeysText">0</strong>
+            </div>
+            <div>
+              <span>Kosong</span>
+              <strong id="emptyKeysText">0</strong>
+            </div>
+          </div>
+        </section>
+
+        <section class="card settings-card" id="settingsCard">
+          <div class="card-header compact">
+            <div>
+              <p class="eyebrow">Pengaturan</p>
+              <h2>URL Backend</h2>
+            </div>
+          </div>
+          <p class="muted">Kalau belum edit <code>config.js</code>, tempel URL Web App Apps Script di sini.</p>
+          <label>
+            Apps Script Web App URL
+            <input type="url" id="scriptUrlInput" placeholder="https://script.google.com/macros/s/.../exec" />
+          </label>
+          <div class="form-actions small-actions">
+            <button type="button" class="secondary-btn" id="saveScriptUrlBtn">Simpan URL</button>
+            <button type="button" class="ghost-btn" id="clearScriptUrlBtn">Reset</button>
+          </div>
+        </section>
+      </aside>
+    </main>
+
+    <section class="card keys-card">
+      <div class="card-header">
+        <div>
+          <p class="eyebrow">Monitoring</p>
+          <h2>Daftar Kunci</h2>
+        </div>
+        <div class="toolbar">
+          <input type="search" id="keySearchInput" placeholder="Cari no kunci / nama" />
+          <select id="statusFilterInput">
+            <option value="Semua">Semua</option>
+            <option value="Dipakai">Dipakai</option>
+            <option value="Kosong">Kosong</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>No Kunci</th>
+              <th>Status</th>
+              <th>Dipakai Oleh</th>
+              <th>No HP/Member</th>
+              <th>Jam Masuk</th>
+              <th>Update Terakhir</th>
+            </tr>
+          </thead>
+          <tbody id="keysTableBody">
+            <tr>
+              <td colspan="6" class="empty-state">Klik refresh setelah backend disambungkan.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+
+  <div id="toast" class="toast hidden"></div>
+
+  <script src="config.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
