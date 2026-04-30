@@ -12,7 +12,7 @@
       <div>
         <p class="eyebrow">Web Admin Internal</p>
         <h1 id="appTitle">Sistem Admin Gym</h1>
-        <p class="subtitle">Input kedatangan, nomor kunci, dan status pelanggan. Data otomatis masuk ke Google Sheet.</p>
+        <p class="subtitle">Input pelanggan masuk/keluar dari HP atau laptop. Data audit otomatis masuk ke Google Sheet.</p>
       </div>
       <div class="clock-card">
         <span id="todayText">Hari ini</span>
@@ -23,7 +23,7 @@
     <section id="setupWarning" class="setup-warning hidden">
       <div>
         <strong>Backend belum disambungkan.</strong>
-        <p>Masukkan URL Web App Google Apps Script di <code>config.js</code>, atau tempel sementara di pengaturan bawah.</p>
+        <p>Masukkan URL Web App Google Apps Script di <code>frontend/config.js</code>, atau tempel sementara di pengaturan bawah.</p>
       </div>
       <button type="button" class="secondary-btn" id="openSettingsBtn">Atur URL</button>
     </section>
@@ -41,16 +41,10 @@
         <form id="gymForm" autocomplete="off">
           <input type="hidden" name="action" value="saveLog" />
 
-          <div class="two-col">
-            <label>
-              Nama Admin
-              <input type="text" name="admin" id="adminInput" placeholder="Contoh: Rani" required />
-            </label>
-            <label>
-              PIN Admin
-              <input type="password" name="pin" id="pinInput" placeholder="PIN" inputmode="numeric" required />
-            </label>
-          </div>
+          <label>
+            Nama Admin / Pegawai
+            <input type="text" name="admin" id="adminInput" placeholder="Contoh: Rani" required />
+          </label>
 
           <label>
             Nama Pelanggan
@@ -59,23 +53,8 @@
 
           <div class="two-col">
             <label>
-              No HP / No Member
-              <input type="text" name="phoneOrMember" id="phoneInput" placeholder="0812xxxx / MBR001" />
-            </label>
-            <label>
               Nomor Kunci
               <input type="number" name="keyNumber" id="keyNumberInput" placeholder="Contoh: 12" min="1" required />
-            </label>
-          </div>
-
-          <div class="two-col">
-            <label>
-              Jenis Kunjungan
-              <select name="visitType" id="visitTypeInput" required>
-                <option value="Harian">Harian</option>
-                <option value="Member">Member</option>
-                <option value="Trial">Trial</option>
-              </select>
             </label>
             <label>
               Status
@@ -85,11 +64,6 @@
               </select>
             </label>
           </div>
-
-          <label>
-            Catatan
-            <textarea name="note" id="noteInput" rows="3" placeholder="Opsional, contoh: bayar cash / kunci kembali"></textarea>
-          </label>
 
           <div class="form-actions">
             <button type="submit" class="primary-btn" id="submitBtn">Simpan ke Google Sheet</button>
@@ -104,14 +78,14 @@
         <section class="card stats-card">
           <div class="card-header compact">
             <div>
-              <p class="eyebrow">Status Kunci</p>
+              <p class="eyebrow">Dashboard</p>
               <h2>Ringkasan</h2>
             </div>
-            <button type="button" class="icon-btn" id="refreshBtn" title="Refresh status kunci">↻</button>
+            <button type="button" class="icon-btn" id="refreshBtn" title="Refresh data">↻</button>
           </div>
           <div class="stats-grid">
             <div>
-              <span>Total</span>
+              <span>Total Kunci</span>
               <strong id="totalKeysText">0</strong>
             </div>
             <div>
@@ -122,7 +96,13 @@
               <span>Kosong</span>
               <strong id="emptyKeysText">0</strong>
             </div>
+            <div>
+              <span>Member Lifetime</span>
+              <strong id="memberCountText">0</strong>
+            </div>
           </div>
+          <p class="realtime-note" id="autoRefreshText">Auto-refresh aktif.</p>
+          <p class="muted mini" id="lastUpdatedText">Belum ada data terbaru.</p>
         </section>
 
         <section class="card settings-card" id="settingsCard">
@@ -145,12 +125,21 @@
       </aside>
     </main>
 
-    <section class="card keys-card">
-      <div class="card-header">
+    <section class="card data-card">
+      <div class="card-header table-header">
         <div>
           <p class="eyebrow">Monitoring</p>
-          <h2>Daftar Kunci</h2>
+          <h2 id="tableTitle">Daftar Kunci</h2>
         </div>
+        <div class="view-actions">
+          <div class="tab-group" role="tablist" aria-label="Pilih data">
+            <button type="button" class="tab-btn active" id="keysViewBtn">Daftar Kunci</button>
+            <button type="button" class="tab-btn" id="membersViewBtn">Member Lifetime</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="keysPanel">
         <div class="toolbar">
           <input type="search" id="keySearchInput" placeholder="Cari no kunci / nama" />
           <select id="statusFilterInput">
@@ -159,26 +148,52 @@
             <option value="Kosong">Kosong</option>
           </select>
         </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>No Kunci</th>
+                <th>Status</th>
+                <th>Dipakai Oleh</th>
+                <th>Jam Masuk</th>
+                <th>Update Terakhir</th>
+              </tr>
+            </thead>
+            <tbody id="keysTableBody">
+              <tr>
+                <td colspan="5" class="empty-state">Data kunci akan muncul setelah backend disambungkan.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </div>
 
-      <div class="table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th>No Kunci</th>
-              <th>Status</th>
-              <th>Dipakai Oleh</th>
-              <th>No HP/Member</th>
-              <th>Jam Masuk</th>
-              <th>Update Terakhir</th>
-            </tr>
-          </thead>
-          <tbody id="keysTableBody">
-            <tr>
-              <td colspan="6" class="empty-state">Klik refresh setelah backend disambungkan.</td>
-            </tr>
-          </tbody>
-        </table>
+      <div id="membersPanel" class="hidden">
+        <div class="toolbar">
+          <input type="search" id="memberSearchInput" placeholder="Cari ID / nama / status" />
+          <button type="button" class="secondary-btn" id="refreshMembersBtn">Refresh Member</button>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>ID Member</th>
+                <th>Nama Member</th>
+                <th>Tanggal Daftar</th>
+                <th>Status</th>
+                <th>Diinput Oleh</th>
+                <th>Update Terakhir</th>
+              </tr>
+            </thead>
+            <tbody id="membersTableBody">
+              <tr>
+                <td colspan="6" class="empty-state">Data member lifetime akan muncul dari sheet <code>MEMBER_LIFETIME</code>.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </div>
     </section>
   </div>

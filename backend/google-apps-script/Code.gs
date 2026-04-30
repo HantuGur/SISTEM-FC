@@ -1,21 +1,16 @@
 /**
  * SISTEM ADMIN GYM - Google Apps Script Backend
  *
- * Cara pakai singkat:
- * 1. Buat Google Sheet kosong.
- * 2. Copy Spreadsheet ID dari URL Google Sheet.
- * 3. Tempel ID ke SPREADSHEET_ID di bawah.
- * 4. Ganti ADMIN_PIN.
- * 5. Jalankan setupGymSheets() sekali dari Apps Script editor.
- * 6. Deploy sebagai Web App.
+ * Versi ini dibuat tanpa PIN, tanpa no HP, tanpa jenis kunjungan, dan tanpa catatan.
+ * Frontend GitHub Pages mengirim data ke backend ini, lalu backend menyimpan ke Google Sheet.
  */
 
 const SPREADSHEET_ID = 'PASTE_GOOGLE_SHEET_ID_HERE';
-const ADMIN_PIN = '1234';
 const MAX_KEY_NUMBER = 100;
 
 const SHEET_LOG = 'LOG_GYM';
 const SHEET_KEYS = 'DATA_KUNCI';
+const SHEET_MEMBERS = 'MEMBER_LIFETIME';
 
 const LOG_HEADERS = [
   'ID',
@@ -23,20 +18,25 @@ const LOG_HEADERS = [
   'Tanggal',
   'Jam',
   'Nama Pelanggan',
-  'No HP/Member',
   'No Kunci',
-  'Jenis Kunjungan',
   'Status',
-  'Admin',
-  'Catatan'
+  'Admin'
 ];
 
 const KEY_HEADERS = [
   'No Kunci',
   'Status',
   'Dipakai Oleh',
-  'No HP/Member',
   'Jam Masuk',
+  'Update Terakhir'
+];
+
+const MEMBER_HEADERS = [
+  'ID Member',
+  'Nama Member',
+  'Tanggal Daftar',
+  'Status',
+  'Diinput Oleh',
   'Update Terakhir'
 ];
 
@@ -44,15 +44,19 @@ function setupGymSheets() {
   const ss = getSpreadsheet_();
   const logSheet = getOrCreateSheet_(ss, SHEET_LOG);
   const keySheet = getOrCreateSheet_(ss, SHEET_KEYS);
+  const memberSheet = getOrCreateSheet_(ss, SHEET_MEMBERS);
 
   setupHeader_(logSheet, LOG_HEADERS);
   setupHeader_(keySheet, KEY_HEADERS);
+  setupHeader_(memberSheet, MEMBER_HEADERS);
   seedKeys_(keySheet, MAX_KEY_NUMBER);
 
   logSheet.setFrozenRows(1);
   keySheet.setFrozenRows(1);
+  memberSheet.setFrozenRows(1);
   logSheet.autoResizeColumns(1, LOG_HEADERS.length);
   keySheet.autoResizeColumns(1, KEY_HEADERS.length);
+  memberSheet.autoResizeColumns(1, MEMBER_HEADERS.length);
 }
 
 function doGet(e) {
@@ -66,6 +70,14 @@ function doGet(e) {
         ok: true,
         message: 'Data kunci berhasil diambil.',
         data: getKeys_()
+      });
+    }
+
+    if (action === 'members') {
+      return respondJson_(params.callback, {
+        ok: true,
+        message: 'Data member lifetime berhasil diambil.',
+        data: getMembers_()
       });
     }
 
@@ -102,8 +114,6 @@ function doPost(e) {
       throw new Error('Action tidak dikenal.');
     }
 
-    validatePin_(params.pin);
-
     const payload = normalizePayload_(params);
     const ss = getSpreadsheet_();
     const logSheet = getOrCreateSheet_(ss, SHEET_LOG);
@@ -137,9 +147,6 @@ function doPost(e) {
 function ensureReady_() {
   if (!SPREADSHEET_ID || SPREADSHEET_ID === 'PASTE_GOOGLE_SHEET_ID_HERE') {
     throw new Error('SPREADSHEET_ID belum diisi di Code.gs.');
-  }
-  if (!ADMIN_PIN || ADMIN_PIN === 'GANTI_PIN_ADMIN') {
-    throw new Error('ADMIN_PIN belum diatur di Code.gs.');
   }
 }
 
@@ -179,7 +186,7 @@ function seedKeys_(sheet, maxKey) {
   for (let i = 1; i <= maxKey; i += 1) {
     const key = String(i).padStart(2, '0');
     if (!existingKeys.has(key)) {
-      rows.push([key, 'Kosong', '', '', '', '']);
+      rows.push([key, 'Kosong', '', '', '']);
     }
   }
 
@@ -188,35 +195,22 @@ function seedKeys_(sheet, maxKey) {
   }
 }
 
-function validatePin_(pin) {
-  if (String(pin || '').trim() !== String(ADMIN_PIN)) {
-    throw new Error('PIN admin salah. Data tidak disimpan.');
-  }
-}
-
 function normalizePayload_(params) {
   const customerName = cleanText_(params.customerName);
-  const phoneOrMember = cleanText_(params.phoneOrMember);
   const keyNumber = normalizeKeyNumber_(params.keyNumber);
-  const visitType = normalizeVisitType_(params.visitType);
   const status = normalizeStatus_(params.status);
   const admin = cleanText_(params.admin);
-  const note = cleanText_(params.note);
 
-  if (!admin) throw new Error('Nama admin wajib diisi.');
+  if (!admin) throw new Error('Nama admin/pegawai wajib diisi.');
   if (!customerName) throw new Error('Nama pelanggan wajib diisi.');
   if (!keyNumber) throw new Error('Nomor kunci wajib diisi.');
-  if (!visitType) throw new Error('Jenis kunjungan tidak valid.');
   if (!status) throw new Error('Status tidak valid.');
 
   return {
     customerName,
-    phoneOrMember,
     keyNumber,
-    visitType,
     status,
     admin,
-    note,
     timestamp: new Date()
   };
 }
@@ -231,12 +225,6 @@ function normalizeKeyNumber_(value) {
   const number = Number(raw);
   if (!Number.isFinite(number) || number <= 0) return '';
   return String(Math.floor(number)).padStart(2, '0');
-}
-
-function normalizeVisitType_(value) {
-  const allowed = ['Harian', 'Member', 'Trial'];
-  const found = allowed.find(item => item.toLowerCase() === String(value || '').trim().toLowerCase());
-  return found || '';
 }
 
 function normalizeStatus_(value) {
@@ -255,12 +243,9 @@ function appendLog_(sheet, payload) {
     formatDate_(timestamp),
     formatTime_(timestamp),
     payload.customerName,
-    payload.phoneOrMember,
     payload.keyNumber,
-    payload.visitType,
     payload.status,
-    payload.admin,
-    payload.note
+    payload.admin
   ]);
 }
 
@@ -274,7 +259,6 @@ function updateKey_(sheet, payload) {
       payload.keyNumber,
       'Dipakai',
       payload.customerName,
-      payload.phoneOrMember,
       formatDateTime_(payload.timestamp || new Date()),
       nowText
     ]]);
@@ -282,7 +266,6 @@ function updateKey_(sheet, payload) {
     sheet.getRange(rowIndex, 1, 1, KEY_HEADERS.length).setValues([[
       payload.keyNumber,
       'Kosong',
-      '',
       '',
       '',
       nowText
@@ -297,7 +280,6 @@ function appendKeyRow_(sheet, keyNumber) {
     'Kosong',
     '',
     '',
-    '',
     ''
   ]]);
   return rowIndex;
@@ -306,7 +288,7 @@ function appendKeyRow_(sheet, keyNumber) {
 function getKeyRecord_(sheet, keyNumber) {
   const lastRow = sheet.getLastRow();
   if (lastRow < 2) {
-    return { rowIndex: null, keyNumber, status: 'Kosong', customerName: '', phoneOrMember: '', checkInTime: '', updatedAt: '' };
+    return { rowIndex: null, keyNumber, status: 'Kosong', customerName: '', checkInTime: '', updatedAt: '' };
   }
 
   const values = sheet.getRange(2, 1, lastRow - 1, KEY_HEADERS.length).getValues();
@@ -319,42 +301,96 @@ function getKeyRecord_(sheet, keyNumber) {
         keyNumber: rowKey,
         status: cleanText_(row[1]) || 'Kosong',
         customerName: cleanText_(row[2]),
-        phoneOrMember: cleanText_(row[3]),
-        checkInTime: stringifyCellDate_(row[4]),
-        updatedAt: stringifyCellDate_(row[5])
+        checkInTime: stringifyCell_(row[3]),
+        updatedAt: stringifyCell_(row[4])
       };
     }
   }
 
-  return { rowIndex: null, keyNumber, status: 'Kosong', customerName: '', phoneOrMember: '', checkInTime: '', updatedAt: '' };
+  return { rowIndex: null, keyNumber, status: 'Kosong', customerName: '', checkInTime: '', updatedAt: '' };
 }
 
 function getKeys_() {
   const ss = getSpreadsheet_();
   const sheet = getOrCreateSheet_(ss, SHEET_KEYS);
   setupHeader_(sheet, KEY_HEADERS);
+  seedKeys_(sheet, MAX_KEY_NUMBER);
 
   const lastRow = sheet.getLastRow();
   if (lastRow < 2) return [];
 
-  const rows = sheet.getRange(2, 1, lastRow - 1, KEY_HEADERS.length).getValues();
-  return rows
-    .filter(row => normalizeKeyNumber_(row[0]))
+  const values = sheet.getRange(2, 1, lastRow - 1, KEY_HEADERS.length).getValues();
+  return values
+    .filter(row => cleanText_(row[0]))
     .map(row => ({
       keyNumber: normalizeKeyNumber_(row[0]),
       status: cleanText_(row[1]) || 'Kosong',
       customerName: cleanText_(row[2]),
-      phoneOrMember: cleanText_(row[3]),
-      checkInTime: stringifyCellDate_(row[4]),
-      updatedAt: stringifyCellDate_(row[5])
-    }))
-    .sort((a, b) => Number(a.keyNumber) - Number(b.keyNumber));
+      checkInTime: stringifyCell_(row[3]),
+      updatedAt: stringifyCell_(row[4])
+    }));
+}
+
+function getMembers_() {
+  const ss = getSpreadsheet_();
+  const sheet = getOrCreateSheet_(ss, SHEET_MEMBERS);
+  setupHeader_(sheet, MEMBER_HEADERS);
+
+  const lastRow = sheet.getLastRow();
+  const lastCol = Math.max(sheet.getLastColumn(), MEMBER_HEADERS.length);
+  if (lastRow < 2) return [];
+
+  const headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0].map(cleanHeader_);
+  const values = sheet.getRange(2, 1, lastRow - 1, lastCol).getValues();
+
+  const idx = {
+    memberId: findHeaderIndex_(headers, ['id member', 'id', 'no member', 'nomor member', 'kode member']),
+    memberName: findHeaderIndex_(headers, ['nama member', 'nama', 'name', 'member']),
+    registeredAt: findHeaderIndex_(headers, ['tanggal daftar', 'tanggal', 'join date', 'mulai member', 'tanggal mulai']),
+    status: findHeaderIndex_(headers, ['status', 'status member', 'tipe member']),
+    createdBy: findHeaderIndex_(headers, ['diinput oleh', 'admin', 'input oleh', 'pegawai']),
+    updatedAt: findHeaderIndex_(headers, ['update terakhir', 'updated at', 'last update', 'terakhir update'])
+  };
+
+  return values
+    .map((row, index) => {
+      const fallbackId = index + 1;
+      const memberId = getRowValue_(row, idx.memberId) || String(fallbackId).padStart(3, '0');
+      const memberName = getRowValue_(row, idx.memberName);
+      return {
+        memberId,
+        memberName,
+        registeredAt: stringifyCell_(getRawRowValue_(row, idx.registeredAt)),
+        status: getRowValue_(row, idx.status) || 'Lifetime',
+        createdBy: getRowValue_(row, idx.createdBy),
+        updatedAt: stringifyCell_(getRawRowValue_(row, idx.updatedAt))
+      };
+    })
+    .filter(item => item.memberName || item.memberId);
+}
+
+function cleanHeader_(value) {
+  return String(value || '').trim().toLowerCase().replace(/\s+/g, ' ');
+}
+
+function findHeaderIndex_(headers, aliases) {
+  for (const alias of aliases) {
+    const index = headers.indexOf(alias);
+    if (index !== -1) return index;
+  }
+  return -1;
+}
+
+function getRawRowValue_(row, index) {
+  return index >= 0 ? row[index] : '';
+}
+
+function getRowValue_(row, index) {
+  return cleanText_(getRawRowValue_(row, index));
 }
 
 function createId_(date) {
-  const prefix = Utilities.formatDate(date, Session.getScriptTimeZone(), 'yyyyMMdd-HHmmss');
-  const uuid = Utilities.getUuid().slice(0, 8).toUpperCase();
-  return `GYM-${prefix}-${uuid}`;
+  return Utilities.formatDate(date, Session.getScriptTimeZone(), 'yyyyMMdd-HHmmss-SSS');
 }
 
 function formatDate_(date) {
@@ -369,21 +405,17 @@ function formatDateTime_(date) {
   return Utilities.formatDate(date, Session.getScriptTimeZone(), 'dd/MM/yyyy HH:mm:ss');
 }
 
-function stringifyCellDate_(value) {
-  if (!value) return '';
-  if (Object.prototype.toString.call(value) === '[object Date]' && !Number.isNaN(value.getTime())) {
-    return formatDateTime_(value);
-  }
+function stringifyCell_(value) {
+  if (value instanceof Date) return formatDateTime_(value);
   return cleanText_(value);
 }
 
 function respondJson_(callback, payload) {
   const json = JSON.stringify(payload);
-  const cb = String(callback || '').trim();
-
-  if (cb && /^[a-zA-Z_$][0-9a-zA-Z_$]*(\.[a-zA-Z_$][0-9a-zA-Z_$]*)*$/.test(cb)) {
+  if (callback) {
+    const safeCallback = String(callback).replace(/[^a-zA-Z0-9_.$]/g, '');
     return ContentService
-      .createTextOutput(`${cb}(${json});`)
+      .createTextOutput(`${safeCallback}(${json});`)
       .setMimeType(ContentService.MimeType.JAVASCRIPT);
   }
 
@@ -393,24 +425,20 @@ function respondJson_(callback, payload) {
 }
 
 function respondPostMessage_(payload) {
-  const safePayload = JSON.stringify(payload).replace(/</g, '\\u003c');
+  const safeJson = JSON.stringify(payload).replace(/</g, '\\u003c');
   const html = `
-<!doctype html>
-<html>
-  <body>
-    <script>
-      (function () {
-        var message = {
-          source: 'sistem-gym-backend',
-          payload: ${safePayload}
-        };
-        try {
-          window.parent.postMessage(message, '*');
-        } catch (error) {}
-      })();
-    </script>
-  </body>
-</html>`;
+    <!doctype html>
+    <html>
+      <body>
+        <script>
+          window.parent.postMessage({
+            source: 'sistem-gym-backend',
+            payload: ${safeJson}
+          }, '*');
+        </script>
+      </body>
+    </html>
+  `;
 
   return HtmlService
     .createHtmlOutput(html)

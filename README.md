@@ -1,15 +1,29 @@
 # Sistem Admin Gym
 
-Web admin internal untuk mencatat pelanggan gym: nama, nomor HP/member, nomor kunci, jenis kunjungan, status masuk/keluar, admin, dan catatan. Frontend bisa dibuka dari laptop/HP lewat GitHub Pages, sedangkan data audit masuk ke Google Sheet lewat Google Apps Script.
+Web admin internal untuk mencatat pelanggan gym dari HP/laptop. Data audit masuk ke Google Sheet lewat Google Apps Script, sedangkan frontend bisa di-host di GitHub Pages.
 
-## Fitur
+Versi ini sudah disesuaikan:
 
-- Input data pelanggan masuk/keluar dari HP atau laptop.
-- Data otomatis masuk ke sheet `LOG_GYM`.
-- Status kunci otomatis masuk ke sheet `DATA_KUNCI`.
-- Kunci yang sedang dipakai bisa dilihat dari dashboard web.
-- PIN admin dicek di backend Google Apps Script, bukan di frontend.
-- Setiap aksi masuk/keluar dicatat sebagai baris baru agar aman untuk audit.
+- PIN admin dihapus.
+- No HP dihapus.
+- Jenis kunjungan dihapus.
+- Catatan dihapus.
+- Ada tombol/halaman **Member Lifetime**.
+- Data kunci dan member lifetime auto-refresh tiap beberapa detik.
+
+## Alur Sistem
+
+```text
+Pegawai buka web admin dari HP/laptop
+↓
+Input nama admin, nama pelanggan, no kunci, status masuk/keluar
+↓
+Data masuk ke LOG_GYM
+↓
+Status kunci update di DATA_KUNCI
+↓
+Data member lifetime dibaca dari MEMBER_LIFETIME
+```
 
 ## Struktur Folder
 
@@ -26,6 +40,42 @@ sistem-gym-admin/
         ├── Code.gs
         └── appsscript.json
 ```
+
+## Sheet yang Dipakai
+
+### `LOG_GYM`
+
+Sheet ini untuk audit. Setiap aksi masuk/keluar akan jadi baris baru.
+
+```text
+ID | Timestamp | Tanggal | Jam | Nama Pelanggan | No Kunci | Status | Admin
+```
+
+### `DATA_KUNCI`
+
+Sheet ini untuk monitoring kunci yang sedang dipakai.
+
+```text
+No Kunci | Status | Dipakai Oleh | Jam Masuk | Update Terakhir
+```
+
+### `MEMBER_LIFETIME`
+
+Sheet ini untuk data member lifetime. Divisi lain bisa input langsung ke sheet ini, lalu web admin akan membaca datanya otomatis.
+
+Header yang disarankan:
+
+```text
+ID Member | Nama Member | Tanggal Daftar | Status | Diinput Oleh | Update Terakhir
+```
+
+Minimal yang wajib ada supaya muncul di web:
+
+```text
+Nama Member
+```
+
+Kode backend juga bisa membaca beberapa nama header alternatif, misalnya `Nama`, `No Member`, `Admin`, atau `Tanggal`.
 
 ## Cara Setup Google Sheet
 
@@ -60,7 +110,6 @@ backend/google-apps-script/Code.gs
 
 ```javascript
 const SPREADSHEET_ID = 'PASTE_GOOGLE_SHEET_ID_HERE';
-const ADMIN_PIN = '1234';
 const MAX_KEY_NUMBER = 100;
 ```
 
@@ -68,7 +117,6 @@ Menjadi misalnya:
 
 ```javascript
 const SPREADSHEET_ID = '1ABCxxxxxxxxxxxxxxxxxxxxx';
-const ADMIN_PIN = '2580';
 const MAX_KEY_NUMBER = 100;
 ```
 
@@ -119,6 +167,7 @@ window.GYM_CONFIG = {
   SCRIPT_URL: "PASTE_APPS_SCRIPT_WEB_APP_URL_HERE",
   APP_NAME: "Sistem Admin Gym",
   GYM_NAME: "Nama Gym Kamu",
+  REFRESH_INTERVAL_MS: 5000,
   ENABLE_LOCAL_SCRIPT_URL_SETTING: true
 };
 ```
@@ -130,9 +179,12 @@ window.GYM_CONFIG = {
   SCRIPT_URL: "https://script.google.com/macros/s/AKfycbxxxxxxxxxxxxxxxxxxxxxxxx/exec",
   APP_NAME: "Sistem Admin Gym",
   GYM_NAME: "Gym Kamu",
+  REFRESH_INTERVAL_MS: 5000,
   ENABLE_LOCAL_SCRIPT_URL_SETTING: true
 };
 ```
+
+`REFRESH_INTERVAL_MS: 5000` artinya web membaca ulang data tiap 5 detik. Kalau mau lebih ringan, ubah ke `10000` untuk 10 detik.
 
 ## Cara Upload ke GitHub Pages
 
@@ -149,40 +201,37 @@ Biasanya bentuknya seperti ini:
 https://username.github.io/sistem-gym-admin/
 ```
 
-Halaman root otomatis mengarah ke:
-
-```text
-/frontend/
-```
-
 ## Cara Pakai Harian
 
 1. Pegawai buka link GitHub Pages dari HP/laptop.
-2. Masukkan nama admin dan PIN.
-3. Isi nama pelanggan, nomor HP/member, nomor kunci, jenis kunjungan, dan status.
+2. Isi nama admin/pegawai.
+3. Isi nama pelanggan, nomor kunci, dan status.
 4. Klik **Simpan ke Google Sheet**.
 5. Untuk audit, buka Google Sheet dan lihat sheet `LOG_GYM`.
+6. Untuk melihat member lifetime, klik tombol **Member Lifetime** di web.
 
-## Catatan Penting Keamanan
+## Cara Divisi Lain Update Member Lifetime
 
-- Jangan taruh PIN admin di file frontend.
-- PIN hanya ada di `Code.gs` backend.
-- URL Apps Script memang terlihat di browser, jadi PIN tetap wajib diisi untuk menyimpan data.
-- Untuk sistem produksi yang lebih serius, bisa ditambah login Google Workspace atau akun admin per pegawai.
-
-## Sheet yang Dibuat Otomatis
-
-### `LOG_GYM`
+Divisi lain cukup buka Google Sheet yang sama, lalu isi data di sheet:
 
 ```text
-ID | Timestamp | Tanggal | Jam | Nama Pelanggan | No HP/Member | No Kunci | Jenis Kunjungan | Status | Admin | Catatan
+MEMBER_LIFETIME
 ```
 
-### `DATA_KUNCI`
+Contoh:
 
 ```text
-No Kunci | Status | Dipakai Oleh | No HP/Member | Jam Masuk | Update Terakhir
+ID Member | Nama Member | Tanggal Daftar | Status | Diinput Oleh | Update Terakhir
+L001      | Budi Santoso | 30/04/2026     | Lifetime | Admin 2 | 30/04/2026 18:30
 ```
+
+Web admin akan membaca ulang data itu otomatis sesuai `REFRESH_INTERVAL_MS`.
+
+## Catatan Penting
+
+- Ini bukan realtime websocket asli, tapi auto-refresh/polling. Untuk kebutuhan admin gym dan audit Sheet, ini biasanya sudah cukup.
+- Karena PIN dihapus, siapa pun yang punya link web dan URL backend bisa input data. Kalau nanti butuh keamanan lagi, bisa ditambah login Google atau PIN per pegawai.
+- Jangan ubah nama sheet kecuali juga mengubah constant di `Code.gs`.
 
 ## Kalau Ada Error Umum
 
@@ -190,11 +239,7 @@ No Kunci | Status | Dipakai Oleh | No HP/Member | Jam Masuk | Update Terakhir
 
 Artinya ID Google Sheet belum ditempel ke `Code.gs`.
 
-### `PIN admin salah`
-
-Artinya PIN yang diketik pegawai beda dengan `ADMIN_PIN` di `Code.gs`.
-
-### Dashboard tidak bisa refresh status kunci
+### Dashboard tidak bisa refresh
 
 Cek lagi:
 
@@ -203,13 +248,11 @@ Cek lagi:
 - Function `setupGymSheets` sudah dijalankan sekali.
 - File `frontend/config.js` sudah diisi URL backend.
 
-## Pengembangan Lanjutan
+### Data member lifetime tidak muncul
 
-Fitur yang bisa ditambah berikutnya:
+Cek:
 
-- Data member permanen.
-- Scan QR member.
-- Laporan pengunjung per hari/bulan.
-- Filter audit by tanggal.
-- Login admin per akun.
-- Export PDF laporan harian.
+- Nama sheet harus `MEMBER_LIFETIME`.
+- Baris pertama adalah header.
+- Minimal ada kolom `Nama Member` atau `Nama`.
+- Data member mulai dari baris kedua.
