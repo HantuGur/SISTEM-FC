@@ -3,12 +3,722 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Sistem Admin Gym</title>
+  <title>Sistem FC Gym</title>
   <style>
-    body{font-family:Arial,sans-serif;background:#0b1220;color:white;display:grid;place-items:center;min-height:100vh;margin:0}
-    a{color:#7dd3fc}
+    :root {
+      --bg: #f5f7fb;
+      --card: rgba(255,255,255,.88);
+      --card-solid: #ffffff;
+      --text: #111827;
+      --muted: #667085;
+      --line: #e5eaf3;
+      --blue: #2563eb;
+      --blue2: #1d4ed8;
+      --green: #16a34a;
+      --red: #dc2626;
+      --orange: #ea580c;
+      --shadow: 0 18px 50px rgba(15, 23, 42, .10);
+      --radius: 28px;
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at top left, rgba(37,99,235,.16), transparent 34rem),
+        radial-gradient(circle at top right, rgba(14,165,233,.14), transparent 32rem),
+        linear-gradient(180deg, #f8fbff 0%, var(--bg) 48%, #eef2f7 100%);
+      min-height: 100vh;
+    }
+
+    button, input, select { font: inherit; }
+    button { cursor: pointer; }
+
+    .shell { width: min(1220px, calc(100% - 28px)); margin: 0 auto; padding: 28px 0 42px; }
+
+    .hero {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      backdrop-filter: blur(22px);
+      background: rgba(245, 247, 251, .78);
+      border-bottom: 1px solid rgba(229,234,243,.70);
+      margin: 0 -14px 22px;
+      padding: 18px 14px;
+    }
+
+    .hero-inner { width: min(1220px, 100%); margin: 0 auto; display: grid; grid-template-columns: 1fr auto; gap: 16px; align-items: center; }
+    .brand { display: flex; align-items: center; gap: 14px; min-width: 0; }
+    .logo {
+      width: 54px; height: 54px; border-radius: 18px;
+      background: linear-gradient(145deg, #2563eb, #0ea5e9);
+      color: white; display: grid; place-items: center; font-weight: 1000; font-size: 22px;
+      box-shadow: 0 18px 32px rgba(37, 99, 235, .24);
+      flex: 0 0 auto;
+    }
+    .kicker { font-size: 13px; font-weight: 900; color: var(--blue); letter-spacing: .18em; text-transform: uppercase; }
+    h1 { margin: 3px 0 0; font-size: clamp(26px, 5vw, 42px); letter-spacing: -.04em; line-height: 1.05; }
+    .subtitle { margin: 6px 0 0; color: var(--muted); font-size: 15px; }
+
+    .status-box { display: flex; gap: 10px; flex-wrap: wrap; justify-content: flex-end; align-items: center; }
+    .pill {
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,.82);
+      color: var(--muted);
+      padding: 10px 14px;
+      border-radius: 999px;
+      font-weight: 800;
+      font-size: 13px;
+      box-shadow: 0 10px 24px rgba(15,23,42,.06);
+      white-space: nowrap;
+    }
+    .pill.good { color: #087443; background: #dcfce7; border-color: #bbf7d0; }
+    .pill.bad { color: #991b1b; background: #fee2e2; border-color: #fecaca; }
+    .pill.warn { color: #9a3412; background: #ffedd5; border-color: #fed7aa; }
+
+    .grid { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(320px, .75fr); gap: 22px; align-items: start; }
+    .card {
+      border: 1px solid rgba(229,234,243,.90);
+      background: var(--card);
+      box-shadow: var(--shadow);
+      border-radius: var(--radius);
+      padding: clamp(20px, 4vw, 30px);
+      backdrop-filter: blur(18px);
+    }
+    .section-label { margin: 0 0 10px; color: var(--blue); font-size: 13px; font-weight: 1000; letter-spacing: .18em; text-transform: uppercase; }
+    .card h2 { margin: 0 0 20px; font-size: clamp(24px, 3vw, 34px); letter-spacing: -.035em; }
+
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .field { display: grid; gap: 8px; }
+    .field.full { grid-column: 1 / -1; }
+    label { font-weight: 900; color: #1f2937; }
+    input, select {
+      width: 100%;
+      border: 1px solid #dce4f2;
+      background: #fff;
+      color: #111827;
+      min-height: 58px;
+      border-radius: 18px;
+      padding: 0 16px;
+      outline: none;
+      font-weight: 800;
+      transition: border .18s ease, box-shadow .18s ease, transform .18s ease;
+    }
+    input:focus, select:focus { border-color: rgba(37,99,235,.7); box-shadow: 0 0 0 5px rgba(37,99,235,.12); }
+    .hint { color: var(--muted); font-size: 13px; margin: 0; }
+
+    .actions { display: grid; grid-template-columns: 1fr auto; gap: 12px; margin-top: 22px; }
+    .btn {
+      min-height: 60px;
+      border: 0;
+      border-radius: 18px;
+      padding: 0 20px;
+      font-weight: 1000;
+      font-size: 16px;
+      transition: transform .16s ease, filter .16s ease, opacity .16s ease;
+    }
+    .btn:hover { transform: translateY(-1px); filter: brightness(1.02); }
+    .btn:disabled { opacity: .55; cursor: not-allowed; transform: none; }
+    .btn-primary { background: linear-gradient(135deg, var(--blue), #0ea5e9); color: #fff; box-shadow: 0 18px 34px rgba(37,99,235,.28); }
+    .btn-ghost { background: #eef3ff; color: #1f2937; }
+    .btn-small { min-height: 44px; border-radius: 14px; padding: 0 14px; font-size: 14px; }
+
+    .side { display: grid; gap: 18px; }
+    .clock-card { overflow: hidden; position: relative; }
+    .clock-card:before {
+      content: ""; position: absolute; inset: -80px -80px auto auto; width: 190px; height: 190px; border-radius: 999px;
+      background: rgba(37,99,235,.12);
+    }
+    .clock-time { position: relative; font-size: clamp(42px, 8vw, 64px); line-height: .95; font-weight: 1000; letter-spacing: -.06em; margin: 0; }
+    .clock-date { position: relative; color: var(--muted); margin: 10px 0 0; font-weight: 800; }
+    .clock-note { position: relative; margin: 18px 0 0; color: #087443; background: #dcfce7; border: 1px solid #bbf7d0; width: fit-content; padding: 9px 12px; border-radius: 999px; font-weight: 900; font-size: 13px; }
+
+    .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .stat {
+      border: 1px solid var(--line);
+      background: #fff;
+      border-radius: 22px;
+      padding: 18px;
+    }
+    .stat span { display: block; color: var(--muted); font-size: 13px; font-weight: 800; }
+    .stat strong { display: block; margin-top: 6px; font-size: 34px; letter-spacing: -.05em; }
+    .stat.blue strong { color: var(--blue); }
+    .stat.green strong { color: var(--green); }
+    .stat.red strong { color: var(--red); }
+
+    .monitor { margin-top: 22px; }
+    .monitor-top { display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap; margin-bottom: 18px; }
+    .tabs { display: flex; gap: 8px; background: #eaf0fb; padding: 7px; border-radius: 22px; }
+    .tab { border: 0; border-radius: 16px; background: transparent; color: #667085; padding: 12px 16px; font-weight: 1000; }
+    .tab.active { background: var(--blue); color: #fff; box-shadow: 0 14px 26px rgba(37,99,235,.24); }
+
+    .filters { display: grid; grid-template-columns: 1fr 170px auto; gap: 12px; margin-bottom: 16px; }
+    .table-wrap { overflow: auto; border: 1px solid var(--line); border-radius: 22px; background: #fff; max-height: 540px; }
+    table { border-collapse: collapse; width: 100%; min-width: 720px; }
+    th, td { text-align: left; padding: 14px 16px; border-bottom: 1px solid #edf1f7; font-size: 14px; }
+    th { position: sticky; top: 0; background: #f8fbff; z-index: 1; color: #475467; font-size: 12px; text-transform: uppercase; letter-spacing: .08em; }
+    tr:hover td { background: #f9fbff; }
+    .badge { display: inline-flex; align-items: center; justify-content: center; border-radius: 999px; padding: 7px 10px; font-size: 12px; font-weight: 1000; }
+    .badge.green { color: #087443; background: #dcfce7; }
+    .badge.red { color: #991b1b; background: #fee2e2; }
+    .badge.blue { color: #1d4ed8; background: #dbeafe; }
+    .empty { color: var(--muted); text-align: center; padding: 28px !important; font-weight: 800; }
+
+    .toast {
+      position: fixed;
+      right: 18px;
+      bottom: 18px;
+      z-index: 100;
+      max-width: min(420px, calc(100% - 36px));
+      color: #fff;
+      background: #111827;
+      box-shadow: 0 24px 50px rgba(15,23,42,.24);
+      border-radius: 22px;
+      padding: 16px 18px;
+      font-weight: 900;
+      display: none;
+    }
+    .toast.show { display: block; animation: pop .18s ease; }
+    .toast.good { background: #15803d; }
+    .toast.bad { background: #dc2626; }
+    .toast.warn { background: #ea580c; }
+    @keyframes pop { from { transform: translateY(12px); opacity: .3; } to { transform: translateY(0); opacity: 1; } }
+
+    .setup-warning { margin-bottom: 18px; border: 1px solid #fed7aa; background: #fff7ed; color: #9a3412; padding: 16px; border-radius: 18px; font-weight: 850; }
+    .hidden { display: none !important; }
+
+    @media (max-width: 920px) {
+      .hero-inner, .grid { grid-template-columns: 1fr; }
+      .status-box { justify-content: flex-start; }
+      .form-grid, .stats, .filters { grid-template-columns: 1fr; }
+      .actions { grid-template-columns: 1fr; }
+      .btn-ghost { width: 100%; }
+      .monitor-top { align-items: stretch; }
+      .tabs { width: 100%; overflow-x: auto; }
+      .tab { flex: 1; white-space: nowrap; }
+      .shell { width: min(100% - 18px, 1220px); padding-top: 12px; }
+      .hero { position: static; }
+      input, select, .btn { min-height: 56px; }
+    }
   </style>
 </head>
 <body>
+  <header class="hero">
+    <div class="hero-inner">
+      <div class="brand">
+        <div class="logo">FC</div>
+        <div>
+          <div class="kicker">Admin Check-in</div>
+          <h1 id="gymName">Sistem FC Gym</h1>
+          <p class="subtitle">Input pelanggan dari HP/laptop. Data audit otomatis masuk Google Sheet.</p>
+        </div>
+      </div>
+      <div class="status-box">
+        <span id="backendBadge" class="pill warn">Mengecek backend...</span>
+        <span id="lastUpdateBadge" class="pill">Belum update</span>
+      </div>
+    </div>
+  </header>
+
+  <main class="shell">
+    <div id="setupWarning" class="setup-warning hidden">
+      SCRIPT_URL belum diisi. Isi sekali di file <b>index.html</b> bagian <b>APP_CONFIG.SCRIPT_URL</b>. Pegawai tidak perlu isi link apa pun.
+    </div>
+
+    <section class="grid">
+      <div class="card">
+        <p class="section-label">Form Input</p>
+        <h2>Catat Masuk / Keluar</h2>
+        <form id="checkForm">
+          <div class="form-grid">
+            <div class="field full">
+              <label for="adminName">Nama Admin / Pegawai</label>
+              <input id="adminName" name="adminName" autocomplete="name" placeholder="Contoh: Rani" required />
+            </div>
+            <div class="field full">
+              <label for="customerName">Nama Pelanggan</label>
+              <input id="customerName" name="customerName" autocomplete="off" placeholder="Contoh: Budi Saputra" required />
+            </div>
+            <div class="field">
+              <label for="keyNumber">Nomor Kunci</label>
+              <input id="keyNumber" name="keyNumber" inputmode="numeric" autocomplete="off" placeholder="Contoh: 12" required />
+            </div>
+            <div class="field">
+              <label for="status">Status</label>
+              <select id="status" name="status" required>
+                <option value="Masuk">Masuk</option>
+                <option value="Keluar">Keluar</option>
+              </select>
+            </div>
+          </div>
+          <p class="hint" style="margin-top:14px;">Tanggal dan jam audit otomatis dicatat oleh server Apps Script.</p>
+          <div class="actions">
+            <button id="submitBtn" class="btn btn-primary" type="submit">Simpan ke Google Sheet</button>
+            <button class="btn btn-ghost" type="button" id="clearBtn">Bersihkan</button>
+          </div>
+        </form>
+      </div>
+
+      <aside class="side">
+        <div class="card clock-card">
+          <p class="section-label">Jam Sekarang</p>
+          <p id="clockTime" class="clock-time">--:--:--</p>
+          <p id="clockDate" class="clock-date">Memuat tanggal...</p>
+          <p class="clock-note">Jam audit tetap dari server Google Sheet</p>
+        </div>
+
+        <div class="card">
+          <p class="section-label">Ringkasan</p>
+          <div class="stats">
+            <div class="stat blue"><span>Total Kunci</span><strong id="totalKeys">0</strong></div>
+            <div class="stat red"><span>Dipakai</span><strong id="usedKeys">0</strong></div>
+            <div class="stat green"><span>Kosong</span><strong id="emptyKeys">0</strong></div>
+            <div class="stat blue"><span>Member Lifetime</span><strong id="memberCount">0</strong></div>
+          </div>
+        </div>
+      </aside>
+    </section>
+
+    <section class="card monitor">
+      <div class="monitor-top">
+        <div>
+          <p class="section-label">Monitoring</p>
+          <h2 id="tableTitle" style="margin-bottom:0;">Daftar Kunci</h2>
+        </div>
+        <div class="tabs" role="tablist">
+          <button class="tab active" type="button" data-tab="keys">Daftar Kunci</button>
+          <button class="tab" type="button" data-tab="members">Member Lifetime</button>
+          <button class="tab" type="button" data-tab="logs">Audit Terakhir</button>
+        </div>
+      </div>
+
+      <div class="filters">
+        <input id="searchInput" placeholder="Cari nama / no kunci / admin" />
+        <select id="statusFilter">
+          <option value="all">Semua status</option>
+          <option value="dipakai">Dipakai</option>
+          <option value="kosong">Kosong</option>
+          <option value="masuk">Masuk</option>
+          <option value="keluar">Keluar</option>
+          <option value="aktif">Aktif</option>
+          <option value="lifetime">Lifetime</option>
+        </select>
+        <button id="refreshBtn" class="btn btn-ghost btn-small" type="button">Refresh</button>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead id="tableHead"></thead>
+          <tbody id="tableBody"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <div id="toast" class="toast"></div>
+
+  <script>
+    // =====================================================
+    // SETTING UTAMA
+    // Isi SCRIPT_URL satu kali saja, lalu upload ke GitHub.
+    // Pegawai cukup buka link GitHub Pages. Tidak perlu isi link Google Sheet / Apps Script.
+    // =====================================================
+    const APP_CONFIG = {
+      SCRIPT_URL: "https://script.google.com/macros/s/AKfycbwJaF9lAlVP-vm3wQw2p83SX9cHuNeYlpkD7IJMHXLK6yURCYFFNH9P4gdD7lCJEGrlQQ/exec
+      APP_NAME: "Sistem Admin Gym",
+      GYM_NAME: "Sistem FC Gym",
+      REFRESH_INTERVAL_MS: 10000
+    };
+
+    const DEFAULT_SCRIPT_PLACEHOLDER = "PASTE_APPS_SCRIPT_WEB_APP_URL_HERE";
+    const state = {
+      activeTab: "keys",
+      keys: [],
+      members: [],
+      logs: [],
+      summary: null,
+      isInitialLoad: true,
+      isSubmitting: false
+    };
+
+    const els = {
+      gymName: document.getElementById("gymName"),
+      setupWarning: document.getElementById("setupWarning"),
+      backendBadge: document.getElementById("backendBadge"),
+      lastUpdateBadge: document.getElementById("lastUpdateBadge"),
+      clockTime: document.getElementById("clockTime"),
+      clockDate: document.getElementById("clockDate"),
+      form: document.getElementById("checkForm"),
+      adminName: document.getElementById("adminName"),
+      customerName: document.getElementById("customerName"),
+      keyNumber: document.getElementById("keyNumber"),
+      status: document.getElementById("status"),
+      submitBtn: document.getElementById("submitBtn"),
+      clearBtn: document.getElementById("clearBtn"),
+      totalKeys: document.getElementById("totalKeys"),
+      usedKeys: document.getElementById("usedKeys"),
+      emptyKeys: document.getElementById("emptyKeys"),
+      memberCount: document.getElementById("memberCount"),
+      tabs: document.querySelectorAll(".tab"),
+      tableTitle: document.getElementById("tableTitle"),
+      searchInput: document.getElementById("searchInput"),
+      statusFilter: document.getElementById("statusFilter"),
+      refreshBtn: document.getElementById("refreshBtn"),
+      tableHead: document.getElementById("tableHead"),
+      tableBody: document.getElementById("tableBody"),
+      toast: document.getElementById("toast")
+    };
+
+    init();
+
+    function init() {
+      document.title = APP_CONFIG.APP_NAME + " - " + APP_CONFIG.GYM_NAME;
+      els.gymName.textContent = APP_CONFIG.GYM_NAME;
+
+      const savedAdmin = localStorage.getItem("sistemFcAdminName") || "";
+      els.adminName.value = savedAdmin;
+
+      bindEvents();
+      updateClock();
+      setInterval(updateClock, 1000);
+
+      if (!isConfigured()) {
+        els.setupWarning.classList.remove("hidden");
+        setBackendBadge("warn", "SCRIPT_URL belum diisi");
+        renderAll();
+        return;
+      }
+
+      refreshData(true);
+      setInterval(() => {
+        if (!document.hidden && !state.isSubmitting) refreshData(false);
+      }, APP_CONFIG.REFRESH_INTERVAL_MS || 10000);
+    }
+
+    function isConfigured() {
+      return APP_CONFIG.SCRIPT_URL &&
+        APP_CONFIG.SCRIPT_URL !== DEFAULT_SCRIPT_PLACEHOLDER &&
+        APP_CONFIG.SCRIPT_URL.includes("script.google.com") &&
+        APP_CONFIG.SCRIPT_URL.includes("/exec");
+    }
+
+    function bindEvents() {
+      els.form.addEventListener("submit", handleSubmit);
+      els.clearBtn.addEventListener("click", () => {
+        els.customerName.value = "";
+        els.keyNumber.value = "";
+        els.status.value = "Masuk";
+        els.customerName.focus();
+      });
+
+      els.adminName.addEventListener("input", () => {
+        localStorage.setItem("sistemFcAdminName", els.adminName.value.trim());
+      });
+
+      els.tabs.forEach(tab => {
+        tab.addEventListener("click", () => {
+          state.activeTab = tab.dataset.tab;
+          els.tabs.forEach(item => item.classList.toggle("active", item.dataset.tab === state.activeTab));
+          els.searchInput.value = "";
+          els.statusFilter.value = "all";
+          renderTable();
+        });
+      });
+
+      els.searchInput.addEventListener("input", renderTable);
+      els.statusFilter.addEventListener("change", renderTable);
+      els.refreshBtn.addEventListener("click", () => refreshData(true));
+
+      window.addEventListener("message", event => {
+        const data = event.data || {};
+        if (data.source !== "sistem-fc-backend") return;
+
+        const payload = data.payload || {};
+        state.isSubmitting = false;
+        els.submitBtn.disabled = false;
+        els.submitBtn.textContent = "Simpan ke Google Sheet";
+
+        if (payload.ok) {
+          showToast(payload.message || "Data berhasil disimpan.", "good");
+          els.customerName.value = "";
+          els.keyNumber.value = "";
+          els.status.value = "Masuk";
+          refreshData(false);
+        } else {
+          showToast(payload.message || "Gagal menyimpan data.", "bad");
+        }
+      });
+    }
+
+    function updateClock() {
+      const now = new Date();
+      els.clockTime.textContent = new Intl.DateTimeFormat("id-ID", {
+        hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false
+      }).format(now).replace(/\./g, ":");
+      els.clockDate.textContent = new Intl.DateTimeFormat("id-ID", {
+        weekday: "long", day: "2-digit", month: "long", year: "numeric"
+      }).format(now);
+    }
+
+    async function refreshData(showStatus) {
+      if (!isConfigured()) return;
+
+      if (showStatus && state.isInitialLoad) setBackendBadge("warn", "Memuat data awal...");
+
+      try {
+        const [keysRes, membersRes, logsRes, pingRes] = await Promise.all([
+          jsonp("keys"),
+          jsonp("members"),
+          jsonp("logs"),
+          jsonp("ping")
+        ]);
+
+        if (!keysRes.ok) throw new Error(keysRes.message || "Gagal ambil daftar kunci.");
+        if (!membersRes.ok) throw new Error(membersRes.message || "Gagal ambil member.");
+        if (!logsRes.ok) throw new Error(logsRes.message || "Gagal ambil audit.");
+        if (!pingRes.ok) throw new Error(pingRes.message || "Backend belum siap.");
+
+        state.keys = Array.isArray(keysRes.data) ? keysRes.data : [];
+        state.members = Array.isArray(membersRes.data) ? membersRes.data : [];
+        state.logs = Array.isArray(logsRes.data) ? logsRes.data : [];
+        state.summary = calculateSummary();
+
+        setBackendBadge("good", "Backend aktif");
+        els.lastUpdateBadge.textContent = "Update: " + shortTime(new Date());
+        renderAll();
+      } catch (error) {
+        setBackendBadge("bad", "Backend error");
+        if (showStatus || state.isInitialLoad) showToast(error.message || "Gagal menghubungi Apps Script.", "bad");
+      } finally {
+        state.isInitialLoad = false;
+      }
+    }
+
+    function jsonp(action) {
+      return new Promise((resolve, reject) => {
+        const callbackName = "sistemFcCb_" + Date.now() + "_" + Math.floor(Math.random() * 100000);
+        const url = new URL(APP_CONFIG.SCRIPT_URL);
+        url.searchParams.set("action", action);
+        url.searchParams.set("callback", callbackName);
+        url.searchParams.set("_", String(Date.now()));
+
+        const script = document.createElement("script");
+        const timer = setTimeout(() => {
+          cleanup();
+          reject(new Error("Timeout menghubungi Apps Script."));
+        }, 15000);
+
+        function cleanup() {
+          clearTimeout(timer);
+          delete window[callbackName];
+          script.remove();
+        }
+
+        window[callbackName] = payload => {
+          cleanup();
+          resolve(payload || { ok: false, message: "Respons kosong." });
+        };
+
+        script.onerror = () => {
+          cleanup();
+          reject(new Error("Gagal menghubungi Apps Script."));
+        };
+
+        script.src = url.toString();
+        document.body.appendChild(script);
+      });
+    }
+
+    function handleSubmit(event) {
+      event.preventDefault();
+
+      if (!isConfigured()) {
+        showToast("SCRIPT_URL belum diisi di index.html.", "bad");
+        return;
+      }
+
+      const admin = els.adminName.value.trim();
+      const customerName = els.customerName.value.trim();
+      const keyNumber = els.keyNumber.value.trim();
+      const status = els.status.value;
+
+      if (!admin || !customerName || !keyNumber) {
+        showToast("Admin, nama pelanggan, dan nomor kunci wajib diisi.", "warn");
+        return;
+      }
+
+      state.isSubmitting = true;
+      els.submitBtn.disabled = true;
+      els.submitBtn.textContent = "Menyimpan...";
+      submitViaIframe({ action: "saveLog", admin, customerName, keyNumber, status });
+    }
+
+    function submitViaIframe(data) {
+      const iframeName = "sistemFcSubmit_" + Date.now();
+      const iframe = document.createElement("iframe");
+      iframe.name = iframeName;
+      iframe.style.display = "none";
+      document.body.appendChild(iframe);
+
+      const form = document.createElement("form");
+      form.method = "POST";
+      form.action = APP_CONFIG.SCRIPT_URL;
+      form.target = iframeName;
+      form.style.display = "none";
+
+      Object.entries(data).forEach(([key, value]) => {
+        const input = document.createElement("input");
+        input.type = "hidden";
+        input.name = key;
+        input.value = value;
+        form.appendChild(input);
+      });
+
+      document.body.appendChild(form);
+      form.submit();
+
+      setTimeout(() => {
+        form.remove();
+        iframe.remove();
+        if (state.isSubmitting) {
+          state.isSubmitting = false;
+          els.submitBtn.disabled = false;
+          els.submitBtn.textContent = "Simpan ke Google Sheet";
+          showToast("Belum ada respons dari backend. Cek deploy Apps Script.", "bad");
+        }
+      }, 18000);
+    }
+
+    function calculateSummary() {
+      const total = state.keys.length;
+      const used = state.keys.filter(item => String(item.status || "").toLowerCase() === "dipakai").length;
+      return { total, used, empty: Math.max(total - used, 0), members: state.members.length };
+    }
+
+    function renderAll() {
+      const s = state.summary || calculateSummary();
+      els.totalKeys.textContent = s.total || 0;
+      els.usedKeys.textContent = s.used || 0;
+      els.emptyKeys.textContent = s.empty || 0;
+      els.memberCount.textContent = s.members || 0;
+      renderTable();
+    }
+
+    function renderTable() {
+      if (state.activeTab === "members") return renderMembers();
+      if (state.activeTab === "logs") return renderLogs();
+      return renderKeys();
+    }
+
+    function renderKeys() {
+      els.tableTitle.textContent = "Daftar Kunci";
+      els.tableHead.innerHTML = `<tr><th>No Kunci</th><th>Status</th><th>Dipakai Oleh</th><th>Jam Masuk</th><th>Update Terakhir</th></tr>`;
+
+      const query = els.searchInput.value.trim().toLowerCase();
+      const filter = els.statusFilter.value;
+      const rows = state.keys.filter(item => {
+        const text = [item.keyNumber, item.status, item.customerName, item.checkInTime, item.updatedAt].join(" ").toLowerCase();
+        const statusOk = filter === "all" || String(item.status || "").toLowerCase() === filter;
+        return text.includes(query) && statusOk;
+      });
+
+      els.tableBody.innerHTML = rows.length ? rows.map(item => `
+        <tr>
+          <td><b>${escapeHtml(item.keyNumber || "-")}</b></td>
+          <td>${statusBadge(item.status)}</td>
+          <td>${escapeHtml(item.customerName || "-")}</td>
+          <td>${escapeHtml(item.checkInTime || "-")}</td>
+          <td>${escapeHtml(item.updatedAt || "-")}</td>
+        </tr>
+      `).join("") : `<tr><td class="empty" colspan="5">Belum ada data kunci.</td></tr>`;
+    }
+
+    function renderMembers() {
+      els.tableTitle.textContent = "Member Lifetime";
+      els.tableHead.innerHTML = `<tr><th>ID/No</th><th>Nama Member</th><th>Status</th><th>Tanggal Daftar</th><th>Diinput Oleh</th><th>Update Terakhir</th></tr>`;
+
+      const query = els.searchInput.value.trim().toLowerCase();
+      const filter = els.statusFilter.value;
+      const rows = state.members.filter(item => {
+        const text = [item.memberId, item.memberName, item.status, item.registeredAt, item.createdBy, item.updatedAt].join(" ").toLowerCase();
+        const statusText = String(item.status || "").toLowerCase();
+        const statusOk = filter === "all" || statusText.includes(filter);
+        return text.includes(query) && statusOk;
+      });
+
+      els.tableBody.innerHTML = rows.length ? rows.map(item => `
+        <tr>
+          <td><b>${escapeHtml(item.memberId || "-")}</b></td>
+          <td>${escapeHtml(item.memberName || "-")}</td>
+          <td>${memberBadge(item.status || "Lifetime")}</td>
+          <td>${escapeHtml(item.registeredAt || "-")}</td>
+          <td>${escapeHtml(item.createdBy || "-")}</td>
+          <td>${escapeHtml(item.updatedAt || "-")}</td>
+        </tr>
+      `).join("") : `<tr><td class="empty" colspan="6">Belum ada member lifetime.</td></tr>`;
+    }
+
+    function renderLogs() {
+      els.tableTitle.textContent = "Audit Terakhir";
+      els.tableHead.innerHTML = `<tr><th>No</th><th>Tanggal</th><th>Jam</th><th>Nama</th><th>No Kunci</th><th>Status</th><th>Admin</th></tr>`;
+
+      const query = els.searchInput.value.trim().toLowerCase();
+      const filter = els.statusFilter.value;
+      const rows = state.logs.filter(item => {
+        const text = [item.no, item.tanggal, item.jam, item.nama, item.noKunci, item.status, item.admin].join(" ").toLowerCase();
+        const statusOk = filter === "all" || String(item.status || "").toLowerCase() === filter;
+        return text.includes(query) && statusOk;
+      });
+
+      els.tableBody.innerHTML = rows.length ? rows.map(item => `
+        <tr>
+          <td><b>${escapeHtml(item.no || "-")}</b></td>
+          <td>${escapeHtml(item.tanggal || "-")}</td>
+          <td><b>${escapeHtml(item.jam || "-")}</b></td>
+          <td>${escapeHtml(item.nama || "-")}</td>
+          <td>${escapeHtml(item.noKunci || "-")}</td>
+          <td>${statusBadge(item.status)}</td>
+          <td>${escapeHtml(item.admin || "-")}</td>
+        </tr>
+      `).join("") : `<tr><td class="empty" colspan="7">Belum ada audit.</td></tr>`;
+    }
+
+    function setBackendBadge(type, text) {
+      els.backendBadge.className = "pill " + (type || "");
+      els.backendBadge.textContent = text;
+    }
+
+    function statusBadge(status) {
+      const value = String(status || "Kosong");
+      const cls = value.toLowerCase() === "dipakai" || value.toLowerCase() === "masuk" ? "red" : "green";
+      return `<span class="badge ${cls}">${escapeHtml(value)}</span>`;
+    }
+
+    function memberBadge(status) {
+      return `<span class="badge blue">${escapeHtml(status || "Lifetime")}</span>`;
+    }
+
+    function showToast(message, type) {
+      els.toast.textContent = message;
+      els.toast.className = "toast show " + (type || "");
+      clearTimeout(showToast.timer);
+      showToast.timer = setTimeout(() => {
+        els.toast.className = "toast";
+      }, 4200);
+    }
+
+    function shortTime(date) {
+      return new Intl.DateTimeFormat("id-ID", { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false }).format(date).replace(/\./g, ":");
+    }
+
+    function escapeHtml(value) {
+      return String(value ?? "").replace(/[&<>'"]/g, char => ({
+        "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#039;", '"': "&quot;"
+      }[char]));
+    }
+  </script>
 </body>
 </html>
